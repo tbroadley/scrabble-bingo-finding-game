@@ -54,12 +54,14 @@ getHomeR = do
 
     defaultLayout [whamlet|
       <p>
-        These seven letters: #{shuffledWord}
-      <p>
-        Can be unscrambled into the following bingos:
-        <ul>
-          $forall bingo <- matchingBingos
-            <li>#{fst bingo}
+        Can you unscramble these seven letters into a Scrabble word?
+      <h2>
+        #{shuffledWord}
+      <p>Answer:
+        <details>
+          <ul>
+            $forall bingo <- matchingBingos
+              <li>#{fst bingo}
     |]
 
 main :: IO ()
