@@ -6,8 +6,11 @@
 
 module Main where
 
+import Control.Monad.Loops
+import Data.List
 import Data.Text (pack, strip, unpack)
 import System.Random
+import System.Random.Shuffle
 import Yesod
 
 data App = App { bingos :: [String]
@@ -19,12 +22,27 @@ mkYesod "App" [parseRoutes|
 
 instance Yesod App
 
+shuffleUntilNotWord :: [String] -> String -> IO String
+shuffleUntilNotWord dictionary word = iterateUntil (not . (`elem` dictionary)) $ shuffleM word
+
 getHomeR :: Handler Html
 getHomeR = do
   App {..} <- getYesod
+
   randomIndex <- liftIO $ getStdRandom (randomR (1, length bingos))
+  let word = bingos !! randomIndex
+  shuffledWord <- liftIO $ shuffleUntilNotWord bingos word
+
+  let sortedWord = sort word
+  let matchingBingos = filter ((== sortedWord) . sort) bingos
+
   defaultLayout [whamlet|
-    A random seven-letter Scrabble word: #{bingos !! randomIndex}
+    <p>These seven letters: #{shuffledWord}</p>
+    <p>
+      Can be unscrambled into the following bingos:
+      <ul>
+        $forall bingo <- matchingBingos
+          <li>#{bingo}
   |]
 
 main :: IO ()
