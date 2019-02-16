@@ -23,7 +23,7 @@ mkYesod "App" [parseRoutes|
 instance Yesod App
 
 shuffleUntilNotInDictionary :: [String] -> String -> IO String
-shuffleUntilNotInDictionary dictionary word = iterateUntil (not . (`elem` dictionary)) $ shuffleM word
+shuffleUntilNotInDictionary dictionary = iterateUntil (not . (`elem` dictionary)) . shuffleM
 
 getHomeR :: Handler Html
 getHomeR = do
@@ -49,7 +49,9 @@ getHomeR = do
 main :: IO ()
 main = do
          dictionary <- readFile "dictionary.txt"
-         let cleanedDictionary = map (unpack . strip . pack) . lines $ dictionary
+         let cleanedDictionary = map (unpack . strip . pack) $ lines dictionary
+         let bingos = filter ((== 7) . length) cleanedDictionary
+
          warp 3000 App
-           { bingos = filter ((== 7) . length) cleanedDictionary
+           { bingos = bingos
            }
