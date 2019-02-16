@@ -37,7 +37,8 @@ getHomeR = do
   let matchingBingos = filter ((== sortedWord) . sort) bingos
 
   defaultLayout [whamlet|
-    <p>These seven letters: #{shuffledWord}</p>
+    <p>
+      These seven letters: #{shuffledWord}
     <p>
       Can be unscrambled into the following bingos:
       <ul>
