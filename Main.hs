@@ -22,8 +22,8 @@ mkYesod "App" [parseRoutes|
 
 instance Yesod App
 
-shuffleUntilNotWord :: [String] -> String -> IO String
-shuffleUntilNotWord dictionary word = iterateUntil (not . (`elem` dictionary)) $ shuffleM word
+shuffleUntilNotInDictionary :: [String] -> String -> IO String
+shuffleUntilNotInDictionary dictionary word = iterateUntil (not . (`elem` dictionary)) $ shuffleM word
 
 getHomeR :: Handler Html
 getHomeR = do
@@ -31,7 +31,7 @@ getHomeR = do
 
   randomIndex <- liftIO $ getStdRandom (randomR (1, length bingos))
   let word = bingos !! randomIndex
-  shuffledWord <- liftIO $ shuffleUntilNotWord bingos word
+  shuffledWord <- liftIO $ shuffleUntilNotInDictionary bingos word
 
   let sortedWord = sort word
   let matchingBingos = filter ((== sortedWord) . sort) bingos
