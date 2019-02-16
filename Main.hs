@@ -9,14 +9,16 @@ module Main where
 import Control.Monad.Loops
 import Data.Char
 import Data.List
+import qualified Data.Map.Strict as Map
 import Data.Text (pack, strip, unpack)
 import System.Random
 import System.Random.Shuffle
 import Text.Read
 import Yesod
 
-data App = App { bingos        :: [String],
-                 frequentWords :: [String]
+type WordWithFrequency = (String, Maybe Int)
+
+data App = App { bingos :: [WordWithFrequency]
                }
 
 mkYesod "App" [parseRoutes|
@@ -25,8 +27,8 @@ mkYesod "App" [parseRoutes|
 
 instance Yesod App
 
-shuffleUntilNotInDictionary :: [String] -> String -> IO String
-shuffleUntilNotInDictionary dictionary = iterateUntil (not . (`elem` dictionary)) . shuffleM
+shuffleUntilNotInDictionary :: [WordWithFrequency] -> String -> IO String
+shuffleUntilNotInDictionary dictionary = iterateUntil (not . (`elem` (map fst dictionary))) . shuffleM
 
 getHomeR :: Handler Html
 getHomeR = do
@@ -35,17 +37,20 @@ getHomeR = do
   common <- lookupGetParam "common"
   let commonBingos = case common of
                        Just c  -> case readMaybe $ unpack c of
-                                    Just i  -> intersect bingos $ take i frequentWords
+                                    Just i  -> filter isFrequent bingos
+                                                 where
+                                                   isFrequent (_, Just f)  = f <= i
+                                                   isFrequent (_, Nothing) = False
                                     Nothing -> bingos
                        Nothing -> bingos
 
   if null commonBingos then invalidArgs [pack "common"] else do
     randomIndex <- liftIO $ getStdRandom (randomR (1, length commonBingos - 1))
-    let word = commonBingos !! randomIndex
+    let word = fst $ commonBingos !! randomIndex
     shuffledWord <- liftIO $ shuffleUntilNotInDictionary commonBingos word
 
     let sortedWord = sort word
-    let matchingBingos = filter ((== sortedWord) . sort) bingos
+    let matchingBingos = filter ((== sortedWord) . sort . fst) bingos
 
     defaultLayout [whamlet|
       <p>
@@ -54,22 +59,18 @@ getHomeR = do
         Can be unscrambled into the following bingos:
         <ul>
           $forall bingo <- matchingBingos
-            <li>#{bingo}
+            <li>#{fst bingo}
     |]
-
-clean :: String -> String
-clean = unpack . strip . pack
 
 main :: IO ()
 main = do
          dictionary <- readFile "dictionary.txt"
-         let cleanedDictionary = map clean $ lines dictionary
+         let cleanedDictionary = map (unpack . strip . pack) $ lines dictionary
          let bingos = filter ((== 7) . length) cleanedDictionary
 
          wordFrequencyList <- readFile "word-frequencies.txt"
-         let frequentWords = map (map toUpper . head . words) $ lines wordFrequencyList
+         let frequentWords = Map.fromList . (`zip` [1..]) . map (map toUpper . head . words) $ lines wordFrequencyList
 
          warp 3000 App
-           { bingos = bingos,
-             frequentWords = frequentWords
+           { bingos = map (\b -> (b, Map.lookup b frequentWords)) bingos
            }
